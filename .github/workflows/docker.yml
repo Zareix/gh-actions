@@ -4,14 +4,20 @@ on:
   workflow_call:
     inputs:
       tag:
-        required: true
         type: string
+        default: latest
       registry:
-        required: true
         type: string
+        default: ghcr.io
       image-name:
         required: true
         type: string
+      push-image:
+        type: boolean
+        default: false
+      platforms:
+        type: string
+        default: linux/amd64,linux/arm64
 
 jobs:
   docker-build-push:
@@ -56,9 +62,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ${{ env.working-directory }}
-          push: false
+          push: ${{ inputs.push-image }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64 #,linux/arm64
+          platforms: ${{ inputs.platforms }}
