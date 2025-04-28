@@ -25,7 +25,7 @@ jobs:
       - name: Remove existing tag if exists
         run: |
           if git rev-parse ${{ inputs.tag }} >/dev/null 2>&1; then
-            echo "Tag ${{ inputs.tag }} already exists"
+            echo "Tag ${{ inputs.tag }} already exists. Deleting it..."
             git push --delete origin ${{ inputs.tag }}
             git tag -d ${{ inputs.tag }}
           fi
@@ -52,7 +52,7 @@ jobs:
         id: changelog
         run: |
           if [ "$previous_tag" = "NONE" ]; then
-            echo "No tags found. Generating changelog for all commits."
+            echo "No tags found. Generating changelog for all commits..."
             git log --pretty=format:"- %h %s" > CHANGELOG.md
           else
             echo "Generating changelog from previous tag: $previous_tag"
