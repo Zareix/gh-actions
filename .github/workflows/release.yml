@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure git identity
+        run: |
+          git config --global user.email "contact@raphael-catarino.fr"
+          git config --global user.name "[bot] zareix"
+
+      - name: Remove existing tag if exists
+        run: |
+          if git rev-parse ${{ inputs.tag }} >/dev/null 2>&1; then
+            echo "Tag ${{ inputs.tag }} already exists"
+            git push --delete origin ${{ inputs.tag }}
+            git tag -d ${{ inputs.tag }}
+          fi
+
+      - name: Create tag
+        run: |
+          git tag -a ${{ inputs.tag }} -m "Version ${{ inputs.tag }}"
+          git push origin ${{ inputs.tag }}
+
+      - name: Get previous tag
+        id: get_previous_tag
+        run: |
+          TAGS=$(git tag --sort=-creatordate)
+          PREVIOUS_TAG=$(echo "$TAGS" | sed -n 2p) 
+
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found."
+            PREVIOUS_TAG="NONE"
+          fi
+
+          echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_ENV
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ "$previous_tag" = "NONE" ]; then
+            echo "No tags found. Generating changelog for all commits."
+            git log --pretty=format:"- %h %s" > CHANGELOG.md
+          else
+            echo "Generating changelog from previous tag: $previous_tag"
+            git log $previous_tag..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
+          fi
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$changelog"
+
+          gh release create refs/tags/"${{inputs.tag}}" \
+            --title="${{inputs.tag}}" \
+            --notes-file CHANGELOG.md \
+            --draft \
+            manifest.json theme.css
