@@ -40,8 +40,7 @@ jobs:
       - name: Get previous tag
         id: get_previous_tag
         run: |
-          TAGS=$(git tag --sort=-creatordate)
-          PREVIOUS_TAG=$(echo "$TAGS" | sed -n 2p) 
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p) 
 
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "No previous tag found."
