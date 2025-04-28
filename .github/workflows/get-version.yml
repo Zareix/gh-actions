@@ -23,7 +23,7 @@ jobs:
         run: |
           if [ -f "./package.json" ]; then
             echo "Found 'package.json' file"
-            $VERSION=$(node -p "require('./package.json').version")
+            VERSION=$(node -p "require('./package.json').version")
           else
             echo "Could not find a file with a version"
             exit 1
