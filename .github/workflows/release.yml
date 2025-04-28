@@ -69,6 +69,4 @@ jobs:
 
           gh release create refs/tags/"${{inputs.tag}}" \
             --title="${{inputs.tag}}" \
-            --notes-file CHANGELOG.md \
-            --draft \
-            manifest.json theme.css
+            --notes-file CHANGELOG.md
