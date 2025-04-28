@@ -10,8 +10,8 @@ on:
         type: string
         default: ghcr.io
       image-name:
-        required: true
         type: string
+        default: ${{ github.repository }}
       push-image:
         type: boolean
         default: false

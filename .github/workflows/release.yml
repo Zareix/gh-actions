@@ -4,8 +4,8 @@ on:
   workflow_call:
     inputs:
       tag:
-        required: true
         type: string
+        required: true
 
 jobs:
   release:
