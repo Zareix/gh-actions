@@ -2,6 +2,25 @@ name: Version
 
 on:
   workflow_call:
+    inputs:
+      type:
+        required: true
+        type: string
+        description: node / file / regex
+      regex:
+        type: string
+        default: __NONE__
+        description: |
+          Should contain a match group with the version.
+          Example: 'const Version = "(\K[^"]+)'
+      file:
+        type: string
+        default: __NONE__
+        description: |
+          File to get the version from. Defaults : node -> package.json, file -> VERSION, regex -> VERSION
+      prefix:
+        type: string
+        default: v
     outputs:
       version:
         value: ${{ jobs.get-version.outputs.version }}
@@ -11,7 +30,7 @@ jobs:
     name: Get version
     runs-on: ubuntu-latest
     outputs:
-      version: v${{ steps.get_version.outputs.version }}
+      version: ${{ inputs.prefix }}${{ steps.get_version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,14 +39,13 @@ jobs:
 
       - name: Get version from file
         id: get_version
-        run: |
-          if [ -f "./package.json" ]; then
-            echo "Found 'package.json' file"
-            VERSION=$(node -p "require('./package.json').version")
-          else
-            echo "Could not find a file with a version"
-            exit 1
-          fi
+        shell: bash
+        env:
+          TYPE: ${{ inputs.type }}
+          FILE: ${{ inputs.file }}
+          REGEX: ${{ inputs.regex }}
+        run: ./scripts/get_version.sh
 
-          echo "Found version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Print version
+        run: |
+          echo "Version is ${{ inputs.prefix }}${{ steps.get_version.outputs.version }}"
