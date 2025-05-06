@@ -44,7 +44,7 @@ jobs:
           TYPE: ${{ inputs.type }}
           FILE: ${{ inputs.file }}
           REGEX: ${{ inputs.regex }}
-        run: ./scripts/get_version.sh
+        run: ${{ github.action_path }}/scripts/get_version.sh
 
       - name: Print version
         run: |
