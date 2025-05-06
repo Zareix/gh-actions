@@ -6,6 +6,8 @@ on:
       tag:
         type: string
         required: true
+      assets:
+        type: string
 
 jobs:
   release:
@@ -68,4 +70,4 @@ jobs:
 
           gh release create refs/tags/"${{inputs.tag}}" \
             --title="${{inputs.tag}}" \
-            --notes-file CHANGELOG.md
+            --notes-file CHANGELOG.md ${{ inputs.assets }}
