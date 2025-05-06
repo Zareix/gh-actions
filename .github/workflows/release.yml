@@ -80,6 +80,7 @@ jobs:
             --notes-file CHANGELOG.md _assets/*
 
       - name: Create release
+        if: ${{ inputs.assets == '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
