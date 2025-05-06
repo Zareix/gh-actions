@@ -63,12 +63,26 @@ jobs:
             git log $previous_tag..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
           fi
 
+      - name: Download assets
+        uses: actions/download-artifact@v3
+        if: ${{ inputs.assets != '' }}
+        with:
+          name: ${{ inputs.assets }}
+          path: _assets
+
+      - name: Create release with assets
+        if: ${{ inputs.assets != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create refs/tags/"${{inputs.tag}}" \
+            --title="${{inputs.tag}}" \
+            --notes-file CHANGELOG.md _assets/*
+
       - name: Create release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$changelog"
-
           gh release create refs/tags/"${{inputs.tag}}" \
             --title="${{inputs.tag}}" \
-            --notes-file CHANGELOG.md ${{ inputs.assets }}
+            --notes-file CHANGELOG.md
