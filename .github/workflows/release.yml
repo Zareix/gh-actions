@@ -8,6 +8,7 @@ on:
         required: true
       assets:
         type: string
+        default: ''
 
 jobs:
   release:
