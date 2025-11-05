@@ -21,7 +21,7 @@ on:
 
 jobs:
   docker-build-push:
-    name: Build ${{ inputs.push-image && "and push aa" || "x" }}docker image
+    name: Build ${{ inputs.push-image && 'and push docker image' || 'docker image' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -57,7 +57,7 @@ jobs:
             type=raw,value=latest
             type=semver,pattern={{raw}},value=${{ inputs.tag }}
 
-      - name: Build and push Docker image
+      - name: Build ${{ inputs.push-image && 'and push docker image' || 'docker image' }}
         id: build-and-push
         uses: docker/build-push-action@v6
         with:
