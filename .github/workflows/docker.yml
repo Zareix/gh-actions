@@ -59,7 +59,7 @@ jobs:
 
       - name: Build ${{ inputs.push-image && 'and push docker image' || 'docker image' }}
         id: build-and-push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ${{ env.working-directory }}
           push: ${{ inputs.push-image }}
