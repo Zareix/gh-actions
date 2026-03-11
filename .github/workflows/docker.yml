@@ -26,7 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      image-name: ${{ steps.set-image-name.outputs.image-name }}
     steps:
+      - name: Lowercase image name
+        id: set-image-name
+        run: echo "image-name=$(echo '${{ inputs.image-name }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
       - name: Set matrix
         id: set-matrix
         run: |
@@ -46,12 +51,13 @@ jobs:
       id-token: write
     env:
       working-directory: .
+      image-name: ${{ needs.setup-matrix.outputs.image-name }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.setup-matrix.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Install cosign
         uses: sigstore/cosign-installer@main
@@ -72,7 +78,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ inputs.registry }}/${{ inputs.image-name }}
+          images: ${{ inputs.registry }}/${{ env.image-name }}
 
       - name: Build ${{ inputs.push-image && 'and push' || '' }} docker image
         id: build-and-push
@@ -84,7 +90,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ inputs.registry }}/${{ inputs.image-name }},push-by-digest=true,name-canonical=true,push=${{ inputs.push-image }}
+          outputs: type=image,name=${{ inputs.registry }}/${{ env.image-name }},push-by-digest=true,name-canonical=true,push=${{ inputs.push-image }}
 
       - name: Export digest
         if: ${{ inputs.push-image }}
@@ -106,11 +112,15 @@ jobs:
     name: Merge and push multi-platform manifest
     if: ${{ inputs.push-image }}
     runs-on: ubuntu-latest
-    needs: docker-build
+    needs:
+      - setup-matrix
+      - docker-build
     permissions:
       contents: read
       packages: write
       id-token: write
+    env:
+      image-name: ${{ needs.setup-matrix.outputs.image-name }}
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -133,7 +143,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ inputs.registry }}/${{ inputs.image-name }}
+          images: ${{ inputs.registry }}/${{ env.image-name }}
           tags: |
             type=raw,value=latest
             type=semver,pattern={{raw}},value=${{ inputs.tag }}
@@ -143,8 +153,8 @@ jobs:
         run: |
           docker buildx imagetools create \
             $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ inputs.registry }}/${{ inputs.image-name }}@sha256:%s ' *)
+            $(printf '${{ inputs.registry }}/${{ env.image-name }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ inputs.registry }}/${{ env.image-name }}:${{ steps.meta.outputs.version }}
