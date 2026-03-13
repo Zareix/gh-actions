@@ -22,17 +22,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Ensure tag exists
+      - name: Ensure tag points to current commit
         env:
           TAG: ${{ inputs.tag }}
         run: |
           git fetch --tags --force
-          if git rev-parse "${TAG}" >/dev/null 2>&1; then
-            echo "Tag ${TAG} already exists."
-          else
-            echo "Tag ${TAG} does not exist. Creating it..."
-            git tag -a "${TAG}" -m "Version ${TAG}"
+
+          HEAD_SHA="$(git rev-parse HEAD)"
+          TAG_SHA="$(git rev-parse "${TAG}^{commit}" 2>/dev/null || true)"
+
+          if [ -z "${TAG_SHA}" ]; then
+            echo "Tag ${TAG} does not exist. Creating it at ${HEAD_SHA}..."
+            git tag -a "${TAG}" -m "Version ${TAG}" "${HEAD_SHA}"
             git push origin "${TAG}"
+          elif [ "${TAG_SHA}" != "${HEAD_SHA}" ]; then
+            echo "Tag ${TAG} points to ${TAG_SHA}, retargeting to ${HEAD_SHA}..."
+            git tag -fa "${TAG}" -m "Version ${TAG}" "${HEAD_SHA}"
+            git push --force origin "${TAG}"
+          else
+            echo "Tag ${TAG} already points to HEAD (${HEAD_SHA}). Nothing to do."
           fi
 
       - name: Check if release exists
