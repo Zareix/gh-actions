@@ -22,76 +22,85 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Configure git identity
+      - name: Ensure tag exists
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          git config --global user.email "contact@raphael-catarino.fr"
-          git config --global user.name "[bot] zareix"
-
-      - name: Remove existing tag if exists
-        run: |
-          if git rev-parse ${{ inputs.tag }} >/dev/null 2>&1; then
-            echo "Tag ${{ inputs.tag }} already exists. Deleting it..."
-            gh release delete \
-                --cleanup-tag \
-                --yes \
-                "${{ inputs.tag }}" \
-                2>/dev/null || true
-
-            # Workaround for https://github.com/cli/cli/issues/8458
-            printf "waiting for tag to be deleted\n"
-            while git fetch --tags --prune-tags; git tag -l | grep "${{ inputs.tag }}"; do
-                sleep 10;
-                printf "still waiting...\n"
-            done
+          git fetch --tags --force
+          if git rev-parse "${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists."
+          else
+            echo "Tag ${TAG} does not exist. Creating it..."
+            git tag -a "${TAG}" -m "Version ${TAG}"
+            git push origin "${TAG}"
           fi
 
-      - name: Create tag
+      - name: Check if release exists
+        id: release_state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
         run: |
-          git tag -a ${{ inputs.tag }} -m "Version ${{ inputs.tag }}"
-          git push origin ${{ inputs.tag }}
+          if gh release view "${TAG}" >/dev/null 2>&1; then
+            echo "Release for ${TAG} already exists."
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release for ${TAG} does not exist."
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Get previous tag
         id: get_previous_tag
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p)
+          PREVIOUS_TAG="$(git tag --sort=-creatordate | grep -vx "${TAG}" | head -n 1 || true)"
 
-          if [ -z "$PREVIOUS_TAG" ]; then
-            echo "No previous tag found."
+          if [ -z "${PREVIOUS_TAG}" ]; then
             PREVIOUS_TAG="NONE"
           fi
 
-          echo "previous_tag=${PREVIOUS_TAG}" >> $GITHUB_ENV
+          echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Generate changelog
-        id: changelog
+        if: ${{ steps.release_state.outputs.release_exists == 'false' }}
+        env:
+          PREVIOUS_TAG: ${{ steps.get_previous_tag.outputs.previous_tag }}
         run: |
-          if [ "$previous_tag" = "NONE" ]; then
-            echo "No tags found. Generating changelog for all commits..."
+          if [ "${PREVIOUS_TAG}" = "NONE" ]; then
+            echo "No previous tag found. Generating changelog for all commits..."
             git log --pretty=format:"- %h %s" > CHANGELOG.md
           else
-            echo "Generating changelog from previous tag: $previous_tag"
-            git log $previous_tag..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
+            echo "Generating changelog from previous tag: ${PREVIOUS_TAG}"
+            git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
           fi
 
       - name: Download assets
+        if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
         uses: actions/download-artifact@v7
-        if: ${{ inputs.assets != '' }}
         with:
           name: ${{ inputs.assets }}
           path: _assets
 
-      - name: Create release
+      - name: Create release (if missing)
+        if: ${{ steps.release_state.outputs.release_exists == 'false' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
         run: |
-          gh release create "${{ inputs.tag }}" \
-            --title "${{ inputs.tag }}" \
+          gh release create "${TAG}" \
+            --title "${TAG}" \
             --notes-file CHANGELOG.md \
             --draft=false
 
-      - name: Upload assets to release
-        if: ${{ inputs.assets != '' }}
+      - name: Upload assets to newly created release
+        if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
         run: |
-          gh release upload "${{ inputs.tag }}" _assets/* --clobber
+          if ls _assets/* >/dev/null 2>&1; then
+            gh release upload "${TAG}" _assets/* --clobber
+          else
+            echo "No assets found in _assets; skipping upload."
+          fi
