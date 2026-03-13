@@ -22,6 +22,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Git user
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Ensure tag points to current commit
         env:
           TAG: ${{ inputs.tag }}
