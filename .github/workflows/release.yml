@@ -8,7 +8,7 @@ on:
         required: true
       assets:
         type: string
-        default: ''
+        default: ""
 
 jobs:
   release:
@@ -31,8 +31,18 @@ jobs:
         run: |
           if git rev-parse ${{ inputs.tag }} >/dev/null 2>&1; then
             echo "Tag ${{ inputs.tag }} already exists. Deleting it..."
-            git push --delete origin ${{ inputs.tag }}
-            git tag -d ${{ inputs.tag }}
+            gh release delete \
+                --cleanup-tag \
+                --yes \
+                "${{ inputs.tag }}" \
+                2>/dev/null || true
+
+            # Workaround for https://github.com/cli/cli/issues/8458
+            printf "waiting for tag to be deleted\n"
+            while git fetch --tags --prune-tags; git tag -l | grep "${{ inputs.tag }}"; do
+                sleep 10;
+                printf "still waiting...\n"
+            done
           fi
 
       - name: Create tag
@@ -43,7 +53,7 @@ jobs:
       - name: Get previous tag
         id: get_previous_tag
         run: |
-          PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p) 
+          PREVIOUS_TAG=$(git tag --sort=-creatordate | sed -n 2p)
 
           if [ -z "$PREVIOUS_TAG" ]; then
             echo "No previous tag found."
@@ -70,20 +80,18 @@ jobs:
           name: ${{ inputs.assets }}
           path: _assets
 
-      - name: Create release with assets
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ inputs.tag }}" \
+            --title "${{ inputs.tag }}" \
+            --notes-file CHANGELOG.md \
+            --draft=false
+
+      - name: Upload assets to release
         if: ${{ inputs.assets != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create refs/tags/"${{inputs.tag}}" \
-            --title="${{inputs.tag}}" \
-            --notes-file CHANGELOG.md _assets/*
-
-      - name: Create release
-        if: ${{ inputs.assets == '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create refs/tags/"${{inputs.tag}}" \
-            --title="${{inputs.tag}}" \
-            --notes-file CHANGELOG.md
+          gh release upload "${{ inputs.tag }}" _assets/* --clobber
