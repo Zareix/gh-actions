@@ -90,7 +90,7 @@ jobs:
 
       - name: Download assets
         if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.assets }}
           path: _assets
