@@ -117,3 +117,25 @@ jobs:
           else
             echo "No assets found in _assets; skipping upload."
           fi
+
+      - name: Summary
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ inputs.tag }}
+          PREVIOUS_TAG: ${{ steps.get_previous_tag.outputs.previous_tag }}
+          RELEASE_EXISTS: ${{ steps.release_state.outputs.release_exists }}
+        run: |
+          RELEASE_URL="$(gh release view "${TAG}" --json url --jq '.url' 2>/dev/null || true)"
+
+          echo "## Release" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Tag** | \`${TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Previous tag** | \`${PREVIOUS_TAG}\` |" >> $GITHUB_STEP_SUMMARY
+          if [ "${RELEASE_EXISTS}" = "true" ]; then
+            echo "| **Status** | Already existed |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| **Status** | Created |" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "${RELEASE_URL}" ]; then
+            echo "| **URL** | [${RELEASE_URL}](${RELEASE_URL}) |" >> $GITHUB_STEP_SUMMARY
+          fi
