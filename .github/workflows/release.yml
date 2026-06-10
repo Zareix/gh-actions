@@ -128,6 +128,7 @@ jobs:
           RELEASE_URL="$(gh release view "${TAG}" --json url --jq '.url' 2>/dev/null || true)"
 
           echo "## Release" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
           echo "|---|---|" >> $GITHUB_STEP_SUMMARY
           echo "| **Tag** | \`${TAG}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| **Previous tag** | \`${PREVIOUS_TAG}\` |" >> $GITHUB_STEP_SUMMARY
