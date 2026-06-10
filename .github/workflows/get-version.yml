@@ -102,3 +102,12 @@ jobs:
       - name: Print version
         run: |
           echo "Version is ${{ inputs.prefix }}${{ steps.get_version.outputs.version }}"
+
+      - name: Summary
+        run: |
+          echo "## Version" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ inputs.prefix }}${{ steps.get_version.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Type** | \`${{ inputs.type }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **File** | \`${{ inputs.file == '__NONE__' && (inputs.type == 'node' && 'package.json' || 'VERSION') || inputs.file }}\` |" >> $GITHUB_STEP_SUMMARY
