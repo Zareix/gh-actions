@@ -75,19 +75,6 @@ jobs:
 
           echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Generate changelog
-        if: ${{ steps.release_state.outputs.release_exists == 'false' }}
-        env:
-          PREVIOUS_TAG: ${{ steps.get_previous_tag.outputs.previous_tag }}
-        run: |
-          if [ "${PREVIOUS_TAG}" = "NONE" ]; then
-            echo "No previous tag found. Generating changelog for all commits..."
-            git log --pretty=format:"- %h %s" > CHANGELOG.md
-          else
-            echo "Generating changelog from previous tag: ${PREVIOUS_TAG}"
-            git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
-          fi
-
       - name: Download assets
         if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
         uses: actions/download-artifact@v8
@@ -97,26 +84,12 @@ jobs:
 
       - name: Create release (if missing)
         if: ${{ steps.release_state.outputs.release_exists == 'false' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          gh release create "${TAG}" \
-            --title "${TAG}" \
-            --notes-file CHANGELOG.md \
-            --draft=false
-
-      - name: Upload assets to newly created release
-        if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          if ls _assets/* >/dev/null 2>&1; then
-            gh release upload "${TAG}" _assets/* --clobber
-          else
-            echo "No assets found in _assets; skipping upload."
-          fi
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          generate_release_notes: true
+          files: ${{ inputs.assets != '' && '_assets/*' || '' }}
+          fail_on_unmatched_files: false
 
       - name: Summary
         env:
