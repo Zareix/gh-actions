@@ -75,6 +75,19 @@ jobs:
 
           echo "previous_tag=${PREVIOUS_TAG}" >> "$GITHUB_OUTPUT"
 
+      - name: Generate changelog
+        if: ${{ steps.release_state.outputs.release_exists == 'false' }}
+        env:
+          PREVIOUS_TAG: ${{ steps.get_previous_tag.outputs.previous_tag }}
+        run: |
+          if [ "${PREVIOUS_TAG}" = "NONE" ]; then
+            echo "No previous tag found. Generating changelog for all commits..."
+            git log --pretty=format:"- %h %s" > CHANGELOG.md
+          else
+            echo "Generating changelog from previous tag: ${PREVIOUS_TAG}"
+            git log "${PREVIOUS_TAG}"..HEAD --pretty=format:"- %h %s" > CHANGELOG.md
+          fi
+
       - name: Download assets
         if: ${{ inputs.assets != '' && steps.release_state.outputs.release_exists == 'false' }}
         uses: actions/download-artifact@v8
@@ -87,7 +100,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.tag }}
-          generate_release_notes: true
+          body_path: CHANGELOG.md
           files: ${{ inputs.assets != '' && '_assets/*' || '' }}
           fail_on_unmatched_files: false
 
