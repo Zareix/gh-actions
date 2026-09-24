@@ -145,7 +145,7 @@ jobs:
         with:
           images: ${{ inputs.registry }}/${{ env.image-name }}
           tags: |
-            type=raw,value=latest
+            ${{ contains(inputs.tag, '-') && 'type=raw,enabled=false,value=latest' || 'type=raw,value=latest' }}
             type=semver,pattern={{raw}},value=${{ inputs.tag }}
 
       - name: Create and push multi-platform manifest
