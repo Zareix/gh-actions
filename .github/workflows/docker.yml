@@ -144,6 +144,8 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ inputs.registry }}/${{ env.image-name }}
+          flavor: |
+            latest=false
           tags: |
             ${{ contains(inputs.tag, '-') && 'type=raw,enabled=false,value=latest' || 'type=raw,value=latest' }}
             type=semver,pattern={{raw}},value=${{ inputs.tag }}
