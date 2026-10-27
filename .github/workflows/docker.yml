@@ -1,3 +1,4 @@
+successfully downloaded text file (SHA: 7422a050c705ffd68b1230060144b1f4c3064dad)
 successfully downloaded text file (SHA: b9ac25e73451ebbb38a21c8c9a06c7e3dfc09aaf)
 name: Docker build image
 
@@ -13,9 +14,6 @@ on:
       image-name:
         type: string
         default: ${{ github.repository }}
-      context:
-        type: string
-        default: .
       push-image:
         type: boolean
         default: false
@@ -54,7 +52,7 @@ jobs:
       packages: write
       id-token: write
     env:
-      working-directory: ${{ inputs.context }}
+      working-directory: .
       image-name: ${{ needs.setup-matrix.outputs.image-name }}
     strategy:
       fail-fast: false
